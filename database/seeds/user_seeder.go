@@ -2,14 +2,14 @@ package seeds
 
 import (
 	"news-with-golang/internal/core/domain/model"
+	"news-with-golang/lib/conv"
 
 	"github.com/rs/zerolog/log"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 func SeedRoles(db *gorm.DB) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte("hsc999"), 14)
+	bytes, err := conv.HashPassword("hsc999")
 	if err != nil {
 		log.Fatal().Err(err).Msg("[SeedRoles] Failed to generate password")
 	}
