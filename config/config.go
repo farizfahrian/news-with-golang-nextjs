@@ -16,7 +16,7 @@ type PsqlDB struct {
 	Port     string `json:"port"`
 	User     string `json:"user"`
 	Password string `json:"password"`
-	Name     string `json:"name"`
+	Name     string `json:"db_name"`
 
 	MaxOpenConns    int `json:"max_open_conns"`
 	MaxIdleConns    int `json:"max_idle_conns"`
@@ -40,16 +40,16 @@ func NewConfig() *Config {
 			JwtExpire:    viper.GetInt64("jwt_expire"),
 		},
 		Psql: PsqlDB{
-			Host:     viper.GetString("psql.host"),
-			Port:     viper.GetString("psql.port"),
-			User:     viper.GetString("psql.user"),
-			Password: viper.GetString("psql.password"),
-			Name:     viper.GetString("psql.name"),
+			Host:     viper.GetString("DATABASE_HOST"),
+			Port:     viper.GetString("DATABASE_PORT"),
+			User:     viper.GetString("DATABASE_USER"),
+			Password: viper.GetString("DATABASE_PASSWORD"),
+			Name:     viper.GetString("DATABASE_NAME"),
 
-			MaxOpenConns:    viper.GetInt("psql.max_open_conns"),
-			MaxIdleConns:    viper.GetInt("psql.max_idle_conns"),
-			ConnMaxLifetime: viper.GetInt("psql.conn_max_lifetime"),
-			ConnMaxIdleTime: viper.GetInt("psql.conn_max_idle_time"),
+			MaxOpenConns:    viper.GetInt("DATABASE_MAX_OPEN_CONNS"),
+			MaxIdleConns:    viper.GetInt("DATABASE_MAX_IDLE_CONNS"),
+			ConnMaxLifetime: viper.GetInt("DATABASE_CONN_MAX_LIFETIME"),
+			ConnMaxIdleTime: viper.GetInt("DATABASE_CONN_MAX_IDLE_TIME"),
 		},
 	}
 }
