@@ -4,6 +4,9 @@ import (
 	"context"
 	"log"
 	"news-with-golang/config"
+	"news-with-golang/internal/adapter/handler"
+	"news-with-golang/internal/adapter/repository"
+	"news-with-golang/internal/core/service"
 	"news-with-golang/lib/auth"
 	"news-with-golang/lib/middleware"
 	"news-with-golang/lib/pagination"
@@ -21,20 +24,32 @@ import (
 
 func RunServer() {
 	cfg := config.NewConfig()
-	_, err := cfg.ConnectionPostgres()
+	db, err := cfg.ConnectionPostgres()
 
 	if err != nil {
 		log.Fatalf("Error connecting to database %v", err)
 		return
 	}
 
+	// Cloudflare R2
 	cfdR2 := cfg.LoadAwsConfig()
 	_ = s3.NewFromConfig(cfdR2)
 
-	_ = auth.NewJwt(cfg)
+	// JWT
+	jwt := auth.NewJwt(cfg)
+
+	// Middleware
 	_ = middleware.NewMiddleware(cfg)
 
+	// Pagination
 	_ = pagination.NewPagination()
+
+	authRepo := repository.NewAuthRepository(db.DB)
+
+	// Service
+	authService := service.NewAuthService(authRepo, cfg, jwt)
+
+	authHandler := handler.NewAuthHandler(authService)
 
 	//initialization server with Fiber
 	app := fiber.New()
@@ -44,7 +59,8 @@ func RunServer() {
 		Format: "${time} ${ip} ${status} - ${latency} ${method} ${path}\n",
 	}))
 
-	_ = app.Group("/api")
+	api := app.Group("/api")
+	api.Post("/login", authHandler.Login)
 
 	go func() {
 		if cfg.App.AppPort == "" {

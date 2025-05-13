@@ -20,7 +20,7 @@ type Options struct {
 }
 
 // GenerateToken implements Jwt.
-func (o *Options) GenerateToken(data entity.JwtData) (string, int64, error) {
+func (o *Options) GenerateToken(data *entity.JwtData) (string, int64, error) {
 	now := time.Now().Local()
 	expiresAt := now.Add(time.Hour * 24)
 	data.RegisteredClaims.ExpiresAt = jwt.NewNumericDate(expiresAt)
@@ -57,7 +57,7 @@ func (o *Options) VerifyAccessToken(token string) (*entity.JwtData, error) {
 		}
 
 		return &entity.JwtData{
-			UserId: claim["user_id"].(float64),
+			UserID: claim["user_id"].(float64),
 		}, nil
 	}
 

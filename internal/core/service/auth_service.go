@@ -44,7 +44,7 @@ func (a *authService) GetUserByEmail(ctx context.Context, req entity.LoginReques
 	}
 
 	jwtData := entity.JwtData{
-		UserId: float64(result.ID),
+		UserID: float64(result.ID),
 		RegisteredClaims: jwt.RegisteredClaims{
 			NotBefore: jwt.NewNumericDate(time.Now().Add(time.Hour * 2)),
 			ID:        string(result.ID),
