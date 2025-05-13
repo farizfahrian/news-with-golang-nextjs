@@ -10,7 +10,7 @@ import (
 )
 
 type Jwt interface {
-	GenerateToken(data entity.JwtData) (string, int64, error)
+	GenerateToken(data *entity.JwtData) (string, int64, error)
 	VerifyAccessToken(token string) (*entity.JwtData, error)
 }
 
