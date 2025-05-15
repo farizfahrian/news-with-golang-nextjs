@@ -51,6 +51,7 @@ func RunServer() {
 	authService := service.NewAuthService(authRepo, cfg, jwt)
 	categoryService := service.NewCategoryService(categoryRepo)
 
+	// Handler
 	authHandler := handler.NewAuthHandler(authService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 
@@ -70,6 +71,7 @@ func RunServer() {
 
 	// Category
 	adminApi.Get("/categories", categoryHandler.GetCategories)
+	adminApi.Post("/categories", categoryHandler.CreateCategory)
 
 	go func() {
 		if cfg.App.AppPort == "" {

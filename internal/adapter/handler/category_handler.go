@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"news-with-golang/internal/adapter/handler/request"
 	"news-with-golang/internal/adapter/handler/response"
 	"news-with-golang/internal/core/domain/entity"
 	"news-with-golang/internal/core/service"
+	validatorLib "news-with-golang/lib/validator"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/log"
@@ -25,7 +27,75 @@ type categoryHandler struct {
 
 // CreateCategory implements CategoryHandler.
 func (c *categoryHandler) CreateCategory(ctx *fiber.Ctx) error {
-	panic("unimplemented")
+	var req request.CategoryRequest
+	claims := ctx.Locals("user").(*entity.JwtData)
+	userID := claims.UserID
+	if userID == 0 {
+		code := "[Handler] CreateCategory - 1"
+		log.Errorw(code, err)
+		errorResp = response.ErrorResponseDefault{
+			Meta: response.Meta{
+				Status:  false,
+				Message: "Unauthorized",
+			},
+		}
+		return ctx.Status(fiber.StatusUnauthorized).JSON(errorResp)
+	}
+
+	err := ctx.BodyParser(&req)
+	if err != nil {
+		code := "[Handler] CreateCategory - 2"
+		log.Errorw(code, err)
+		errorResp = response.ErrorResponseDefault{
+			Meta: response.Meta{
+				Status:  false,
+				Message: "Bad Request",
+			},
+		}
+		return ctx.Status(fiber.StatusBadRequest).JSON(errorResp)
+	}
+
+	if err := validatorLib.ValidateStruct(req); err != nil {
+		code := "[Handler] CreateCategory - 3"
+		log.Errorw(code, err)
+		errorResp = response.ErrorResponseDefault{
+			Meta: response.Meta{
+				Status:  false,
+				Message: err.Error(),
+			},
+		}
+		return ctx.Status(fiber.StatusBadRequest).JSON(errorResp)
+	}
+
+	categoryEntity := entity.CategoryEntity{
+		Title: req.Title,
+		User: entity.UserEntity{
+			ID: int64(userID),
+		},
+	}
+	err = c.categoryService.CreateCategory(ctx.Context(), categoryEntity)
+	if err != nil {
+		code := "[Handler] CreateCategory - 4"
+		log.Errorw(code, err)
+		errorResp = response.ErrorResponseDefault{
+			Meta: response.Meta{
+				Status:  false,
+				Message: err.Error(),
+			},
+		}
+		return ctx.Status(fiber.StatusInternalServerError).JSON(errorResp)
+	}
+
+	defaultSuccessResponse = response.DefaultSuccessResponse{
+		Meta: response.Meta{
+			Status:  true,
+			Message: "Category created successfully",
+		},
+		Data:       nil,
+		Pagination: nil,
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(defaultSuccessResponse)
 }
 
 // DeleteCategory implements CategoryHandler.
@@ -77,7 +147,7 @@ func (c *categoryHandler) GetCategories(ctx *fiber.Ctx) error {
 			Message: "Categories fetched successfully",
 		},
 		Data:       categoryResponses,
-		Pagination: response.PaginationResponse{},
+		Pagination: nil,
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(defaultSuccessResponse)

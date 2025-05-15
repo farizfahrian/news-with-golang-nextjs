@@ -40,7 +40,7 @@ func (o *Options) CheckToken() fiber.Handler {
 			return c.Status(fiber.StatusUnauthorized).JSON(errorResponse)
 		}
 
-		c.Locals("user_id", claims)
+		c.Locals("user", claims)
 
 		return c.Next()
 	}
