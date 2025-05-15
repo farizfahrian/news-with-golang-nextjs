@@ -25,16 +25,37 @@ type categoryRepository struct {
 
 // CreateCategory implements CategoryRepository.
 func (c *categoryRepository) CreateCategory(ctx context.Context, req entity.CategoryEntity) error {
-	var countSlug int64
-	err = c.db.Table("categories").Where("slug = ?", req.Slug).Count(&countSlug).Error
+	var slugs []string
+	baseSlug := req.Slug
+	err = c.db.Table("categories").
+		Where("slug LIKE ?", baseSlug+"%").
+		Pluck("slug", &slugs).Error
 	if err != nil {
-		code := "[Repository] CreateCategory -1"
+		code = "[Repository] CreateCategory -1"
 		log.Errorw(code, err)
 		return err
 	}
 
-	countSlug = countSlug + 1
-	slug := fmt.Sprintf("%s-%d", req.Slug, countSlug)
+	// 2. Find the next available suffix
+	slug := baseSlug
+	if len(slugs) > 0 {
+		max := 0
+		for _, s := range slugs {
+			if s == baseSlug {
+				continue
+			}
+			var n int
+			// Match pattern: baseSlug-<number>
+			if _, err := fmt.Sscanf(s, baseSlug+"-%d", &n); err == nil {
+				if n > max {
+					max = n
+				}
+			}
+		}
+		slug = fmt.Sprintf("%s-%d", baseSlug, max+1)
+	}
+
+	// 3. Use the unique slug
 	modelCategory := model.Category{
 		Title:       req.Title,
 		Slug:        slug,
@@ -43,7 +64,7 @@ func (c *categoryRepository) CreateCategory(ctx context.Context, req entity.Cate
 
 	err = c.db.Create(&modelCategory).Error
 	if err != nil {
-		code := "[Repository] CreateCategory -2"
+		code = "[Repository] CreateCategory -1"
 		log.Errorw(code, err)
 		return err
 	}
