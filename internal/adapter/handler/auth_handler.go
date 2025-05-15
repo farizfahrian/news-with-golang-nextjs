@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2/log"
 )
 
+var err error
 var code string
 var errorResp response.ErrorResponseDefault
 

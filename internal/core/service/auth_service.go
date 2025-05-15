@@ -8,13 +8,13 @@ import (
 	"news-with-golang/internal/core/domain/entity"
 	"news-with-golang/lib/auth"
 	"news-with-golang/lib/conv"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var err error
 var code string
 
 type AuthService interface {
@@ -47,7 +47,7 @@ func (a *authService) GetUserByEmail(ctx context.Context, req entity.LoginReques
 		UserID: float64(result.ID),
 		RegisteredClaims: jwt.RegisteredClaims{
 			NotBefore: jwt.NewNumericDate(time.Now().Add(time.Hour * 2)),
-			ID:        string(result.ID),
+			ID:        strconv.FormatInt(result.ID, 10),
 		},
 	}
 
