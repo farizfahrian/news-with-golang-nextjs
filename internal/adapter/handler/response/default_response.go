@@ -1,7 +1,7 @@
 package response
 
 type ErrorResponseDefault struct {
-	Meta Meta `json:"meta"`
+	Meta
 }
 
 type Meta struct {

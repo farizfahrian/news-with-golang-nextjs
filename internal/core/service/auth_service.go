@@ -38,7 +38,7 @@ func (a *authService) GetUserByEmail(ctx context.Context, req entity.LoginReques
 
 	if !conv.CheckPasswordHas(req.Password, result.Password) {
 		code = "[Service] GetUserByEmail - 2"
-		err = errors.New("password is not correct")
+		err = errors.New("invalid password")
 		log.Errorw(code, err)
 		return nil, err
 	}
