@@ -24,9 +24,7 @@ func ValidateStruct(obj interface{}) error {
 			case "required":
 				errorMessages = append(errorMessages, "Field "+valErr.Field()+" is required")
 			case "min":
-				if valErr.Field() == "Password" {
-					errorMessages = append(errorMessages, "Field "+valErr.Field()+" must be at least "+valErr.Param()+" characters")
-				}
+				errorMessages = append(errorMessages, "Field "+valErr.Field()+" must be at least "+valErr.Param()+" characters")
 			case "eqfield":
 				errorMessages = append(errorMessages, "Field "+valErr.Field()+" must be equal to "+valErr.Param())
 			default:
