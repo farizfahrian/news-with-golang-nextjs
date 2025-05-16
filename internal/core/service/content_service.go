@@ -12,7 +12,7 @@ import (
 
 type ContentService interface {
 	GetContents(ctx context.Context) ([]entity.ContentEntity, error)
-	GetContentById(ctx context.Context, id int64) (entity.ContentEntity, error)
+	GetContentById(ctx context.Context, id int64) (*entity.ContentEntity, error)
 	CreateContent(ctx context.Context, req entity.ContentEntity) error
 	UpdateContent(ctx context.Context, req entity.ContentEntity) error
 	DeleteContent(ctx context.Context, id int64) error
@@ -27,24 +27,45 @@ type contentService struct {
 
 // CreateContent implements ContentService.
 func (c *contentService) CreateContent(ctx context.Context, req entity.ContentEntity) error {
-	panic("unimplemented")
+	err := c.contentRepo.CreateContent(ctx, req)
+	if err != nil {
+		code = "[Service] CreateContent - 1"
+		log.Errorw(code, err)
+		return err
+	}
+
+	return nil
 }
 
 // DeleteContent implements ContentService.
 func (c *contentService) DeleteContent(ctx context.Context, id int64) error {
-	panic("unimplemented")
+	err := c.contentRepo.DeleteContent(ctx, id)
+	if err != nil {
+		code = "[Service] DeleteContent - 1"
+		log.Errorw(code, err)
+		return err
+	}
+
+	return nil
 }
 
 // GetContentById implements ContentService.
-func (c *contentService) GetContentById(ctx context.Context, id int64) (entity.ContentEntity, error) {
-	panic("unimplemented")
+func (c *contentService) GetContentById(ctx context.Context, id int64) (*entity.ContentEntity, error) {
+	result, err := c.contentRepo.GetContentById(ctx, id)
+	if err != nil {
+		code = "[Service] GetContentById - 1"
+		log.Errorw(code, err)
+		return nil, err
+	}
+
+	return result, nil
 }
 
 // GetContents implements ContentService.
 func (c *contentService) GetContents(ctx context.Context) ([]entity.ContentEntity, error) {
 	result, err := c.contentRepo.GetContents(ctx)
 	if err != nil {
-		code := "[Service] GetContents - 1"
+		code = "[Service] GetContents - 1"
 		log.Errorw(code, err)
 		return nil, err
 	}

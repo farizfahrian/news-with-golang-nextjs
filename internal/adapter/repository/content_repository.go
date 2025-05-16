@@ -13,7 +13,7 @@ import (
 
 type ContentRepository interface {
 	GetContents(ctx context.Context) ([]entity.ContentEntity, error)
-	GetContentById(ctx context.Context, id int64) (entity.ContentEntity, error)
+	GetContentById(ctx context.Context, id int64) (*entity.ContentEntity, error)
 	CreateContent(ctx context.Context, req entity.ContentEntity) error
 	UpdateContent(ctx context.Context, req entity.ContentEntity) error
 	DeleteContent(ctx context.Context, id int64) error
@@ -25,17 +25,74 @@ type contentRepository struct {
 
 // CreateContent implements ContentRepository.
 func (c *contentRepository) CreateContent(ctx context.Context, req entity.ContentEntity) error {
-	panic("unimplemented")
+	tags := strings.Join(req.Tags, ",")
+	modelContent := model.Content{
+		Title:       req.Title,
+		Excerpt:     req.Excerpt,
+		Description: req.Description,
+		Image:       req.Image,
+		Tags:        tags,
+		Status:      req.Status,
+		CategoryID:  req.CategoryID,
+		CreatedByID: req.CreatedByID,
+	}
+
+	err = c.db.Create(&modelContent).Error
+	if err != nil {
+		code := "[Repository] CreateContent - 1"
+		log.Errorw(code, err)
+		return err
+	}
+
+	return nil
 }
 
 // DeleteContent implements ContentRepository.
 func (c *contentRepository) DeleteContent(ctx context.Context, id int64) error {
-	panic("unimplemented")
+	err := c.db.Where("id = ?", id).Delete(&model.Content{}).Error
+	if err != nil {
+		code = "[Repository] DeleteContent - 1"
+		log.Errorw(code, err)
+		return err
+	}
+
+	return nil
 }
 
 // GetContentById implements ContentRepository.
-func (c *contentRepository) GetContentById(ctx context.Context, id int64) (entity.ContentEntity, error) {
-	panic("unimplemented")
+func (c *contentRepository) GetContentById(ctx context.Context, id int64) (*entity.ContentEntity, error) {
+	var modelContent model.Content
+
+	err = c.db.Where("id = ?", id).Preload("User", "Category").First(&modelContent).Error
+	if err != nil {
+		code = "[Repository] GetContentById - 1"
+		log.Errorw(code, err)
+		return nil, err
+	}
+
+	tags := strings.Split(modelContent.Tags, ",")
+	resp := entity.ContentEntity{
+		ID:          modelContent.ID,
+		Title:       modelContent.Title,
+		Excerpt:     modelContent.Excerpt,
+		Description: modelContent.Description,
+		Image:       modelContent.Image,
+		Tags:        tags,
+		Status:      modelContent.Status,
+		CategoryID:  modelContent.CategoryID,
+		CreatedByID: modelContent.CreatedByID,
+		CreatedAt:   modelContent.CreatedAt,
+		Category: entity.CategoryEntity{
+			ID:    modelContent.Category.ID,
+			Title: modelContent.Category.Title,
+			Slug:  modelContent.Category.Slug,
+		},
+		User: entity.UserEntity{
+			ID:   modelContent.User.ID,
+			Name: modelContent.User.Name,
+		},
+	}
+	return &resp, nil
 }
 
 // GetContents implements ContentRepository.

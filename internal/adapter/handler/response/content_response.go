@@ -1,6 +1,6 @@
 package response
 
-type ContentResponse struct {
+type SuccessContentResponse struct {
 	ID           int64    `json:"id"`
 	Title        string   `json:"title"`
 	Excerpt      string   `json:"excerpt"`
