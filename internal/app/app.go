@@ -70,8 +70,11 @@ func RunServer() {
 	adminApi.Use(middlewareAuth.CheckToken())
 
 	// Category
-	adminApi.Get("/categories", categoryHandler.GetCategories)
-	adminApi.Post("/categories", categoryHandler.CreateCategory)
+	categoryApi := adminApi.Group("/categories")
+	categoryApi.Get("/", categoryHandler.GetCategories)
+	categoryApi.Post("/", categoryHandler.CreateCategory)
+	categoryApi.Get("/:categoryID", categoryHandler.GetCategoryById)
+	categoryApi.Put("/:categoryID", categoryHandler.EditCategoryById)
 
 	go func() {
 		if cfg.App.AppPort == "" {

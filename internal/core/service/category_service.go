@@ -14,7 +14,7 @@ type CategoryService interface {
 	DeleteCategory(ctx context.Context, id int64) error
 	GetCategories(ctx context.Context) ([]entity.CategoryEntity, error)
 	GetCategoryById(ctx context.Context, id int64) (*entity.CategoryEntity, error)
-	UpdateCategory(ctx context.Context, id int64, req entity.CategoryEntity) error
+	EditCategoryById(ctx context.Context, req entity.CategoryEntity) error
 }
 
 type categoryService struct {
@@ -41,6 +41,32 @@ func (c *categoryService) DeleteCategory(ctx context.Context, id int64) error {
 	panic("unimplemented")
 }
 
+// EditCategory implements CategoryService.
+func (c *categoryService) EditCategoryById(ctx context.Context, req entity.CategoryEntity) error {
+	categoryData, err := c.categoryRepository.GetCategoryById(ctx, req.ID)
+	if err != nil {
+		code := "[Service] EditCategoryById - 1"
+		log.Errorw(code, err)
+		return err
+	}
+
+	slug := conv.GenerateSlug(req.Title)
+	if categoryData.Title == req.Title {
+		slug = categoryData.Slug
+	}
+
+	req.Slug = slug
+
+	err = c.categoryRepository.EditCategoryById(ctx, req)
+	if err != nil {
+		code := "[Service] EditCategoryById - 2"
+		log.Errorw(code, err)
+		return err
+	}
+
+	return nil
+}
+
 // GetCategories implements CategoryService.
 func (c *categoryService) GetCategories(ctx context.Context) ([]entity.CategoryEntity, error) {
 	results, err := c.categoryRepository.GetCategories(ctx)
@@ -55,22 +81,14 @@ func (c *categoryService) GetCategories(ctx context.Context) ([]entity.CategoryE
 
 // GetCategoryById implements CategoryService.
 func (c *categoryService) GetCategoryById(ctx context.Context, id int64) (*entity.CategoryEntity, error) {
-	results, err := c.categoryRepository.GetCategoryById(ctx, id)
+	result, err := c.categoryRepository.GetCategoryById(ctx, id)
 	if err != nil {
+		code := "[Service] GetCategoryById - 1"
+		log.Errorw(code, err)
 		return nil, err
 	}
 
-	return results, nil
-}
-
-// UpdateCategory implements CategoryService.
-func (c *categoryService) UpdateCategory(ctx context.Context, id int64, req entity.CategoryEntity) error {
-	err := c.categoryRepository.UpdateCategory(ctx, id, req)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return result, nil
 }
 
 func NewCategoryService(categoryRepository repository.CategoryRepository) CategoryService {
