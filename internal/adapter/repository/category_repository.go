@@ -74,7 +74,29 @@ func (c *categoryRepository) CreateCategory(ctx context.Context, req entity.Cate
 
 // DeleteCategory implements CategoryRepository.
 func (c *categoryRepository) DeleteCategory(ctx context.Context, id int64) error {
-	panic("unimplemented")
+	var count int64
+	err = c.db.Table("contents").Where("category_id = ?", id).Count(&count).Error
+	if err != nil {
+		code := "[Repository] DeleteCategory -1"
+		log.Errorw(code, err)
+		return err
+	}
+
+	if count > 0 {
+		code := "[Repository] DeleteCategory -2"
+		err = errors.New("category has contents")
+		log.Errorw(code, err)
+		return err
+	}
+
+	err = c.db.Where("id = ?", id).Delete(&model.Category{}).Error
+	if err != nil {
+		code := "[Repository] DeleteCategory -1"
+		log.Errorw(code, err)
+		return err
+	}
+
+	return nil
 }
 
 // EditCategory implements CategoryRepository.

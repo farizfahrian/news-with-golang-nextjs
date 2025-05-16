@@ -101,7 +101,57 @@ func (c *categoryHandler) CreateCategory(ctx *fiber.Ctx) error {
 
 // DeleteCategory implements CategoryHandler.
 func (c *categoryHandler) DeleteCategory(ctx *fiber.Ctx) error {
-	panic("unimplemented")
+	claims := ctx.Locals("user").(*entity.JwtData)
+	userID := claims.UserID
+	if userID == 0 {
+		code := "[Handler] DeleteCategory - 1"
+		log.Errorw(code, err)
+		errorResp = response.ErrorResponseDefault{
+			Meta: response.Meta{
+				Status:  false,
+				Message: "Unauthorized",
+			},
+		}
+		return ctx.Status(fiber.StatusUnauthorized).JSON(errorResp)
+	}
+
+	idParam := ctx.Params("categoryID")
+	id, err := conv.StringToInt(idParam)
+	if err != nil {
+		code := "[Handler] DeleteCategory - 2"
+		log.Errorw(code, err)
+		errorResp = response.ErrorResponseDefault{
+			Meta: response.Meta{
+				Status:  false,
+				Message: err.Error(),
+			},
+		}
+		return ctx.Status(fiber.StatusBadRequest).JSON(errorResp)
+	}
+
+	err = c.categoryService.DeleteCategory(ctx.Context(), id)
+	if err != nil {
+		code := "[Handler] DeleteCategory - 3"
+		log.Errorw(code, err)
+		errorResp = response.ErrorResponseDefault{
+			Meta: response.Meta{
+				Status:  false,
+				Message: err.Error(),
+			},
+		}
+		return ctx.Status(fiber.StatusInternalServerError).JSON(errorResp)
+	}
+
+	defaultSuccessResponse = response.DefaultSuccessResponse{
+		Meta: response.Meta{
+			Status:  true,
+			Message: "Category deleted successfully",
+		},
+		Data:       nil,
+		Pagination: nil,
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(defaultSuccessResponse)
 }
 
 // EditCategoryById implements CategoryHandler.
