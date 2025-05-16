@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"news-with-golang/config"
+	"news-with-golang/internal/adapter/cloudflare"
 	"news-with-golang/internal/adapter/handler"
 	"news-with-golang/internal/adapter/repository"
 	"news-with-golang/internal/core/service"
@@ -27,13 +28,20 @@ func RunServer() {
 	db, err := cfg.ConnectionPostgres()
 
 	if err != nil {
-		log.Fatalf("Error connecting to database %v", err)
+		log.Fatalf("Error connecting to database: %v", err)
+		return
+	}
+
+	err = os.MkdirAll("./temp/content", 0755)
+	if err != nil {
+		log.Fatalf("Error creating temp directory: %v", err)
 		return
 	}
 
 	// Cloudflare R2
 	cfdR2 := cfg.LoadAwsConfig()
-	_ = s3.NewFromConfig(cfdR2)
+	s3Client := s3.NewFromConfig(cfdR2)
+	r2Adapter := cloudflare.NewCloudflareR2Adapter(s3Client, cfg)
 
 	// JWT
 	jwt := auth.NewJwt(cfg)
@@ -46,14 +54,17 @@ func RunServer() {
 
 	authRepo := repository.NewAuthRepository(db.DB)
 	categoryRepo := repository.NewCategoryRepository(db.DB)
+	contentRepo := repository.NewContentRepository(db.DB)
 
 	// Service
 	authService := service.NewAuthService(authRepo, cfg, jwt)
 	categoryService := service.NewCategoryService(categoryRepo)
+	contentService := service.NewContentService(contentRepo, cfg, r2Adapter)
 
 	// Handler
 	authHandler := handler.NewAuthHandler(authService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
+	contentHandler := handler.NewContentHandler(contentService)
 
 	//initialization server with Fiber
 	app := fiber.New()
@@ -76,6 +87,15 @@ func RunServer() {
 	categoryApi.Get("/:categoryID", categoryHandler.GetCategoryById)
 	categoryApi.Put("/:categoryID", categoryHandler.EditCategoryById)
 	categoryApi.Delete("/:categoryID", categoryHandler.DeleteCategory)
+
+	// Content
+	contentApi := adminApi.Group("/contents")
+	contentApi.Get("/", contentHandler.GetContents)
+	contentApi.Post("/", contentHandler.CreateContent)
+	contentApi.Get("/:contentID", contentHandler.GetContentById)
+	contentApi.Put("/:contentID", contentHandler.UpdateContent)
+	contentApi.Delete("/:contentID", contentHandler.DeleteContent)
+	contentApi.Post("/upload-image", contentHandler.UploadImageR2)
 
 	go func() {
 		if cfg.App.AppPort == "" {
