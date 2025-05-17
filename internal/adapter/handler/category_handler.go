@@ -20,10 +20,48 @@ type CategoryHandler interface {
 	GetCategories(ctx *fiber.Ctx) error
 	GetCategoryById(ctx *fiber.Ctx) error
 	EditCategoryById(ctx *fiber.Ctx) error
+
+	GetCategoryFE(ctx *fiber.Ctx) error
 }
 
 type categoryHandler struct {
 	categoryService service.CategoryService
+}
+
+// GetCategoryFE implements CategoryHandler.
+func (c *categoryHandler) GetCategoryFE(ctx *fiber.Ctx) error {
+	results, err := c.categoryService.GetCategories(ctx.Context())
+	if err != nil {
+		code := "[Handler] GetCategoryFE - 1"
+		log.Errorw(code, err)
+		errorResp = response.ErrorResponseDefault{
+			Meta: response.Meta{
+				Status:  false,
+				Message: err.Error(),
+			},
+		}
+		return ctx.Status(fiber.StatusInternalServerError).JSON(errorResp)
+	}
+
+	categoryResponses := []response.SuccessCategoryResponse{}
+	for _, result := range results {
+		categoryResponses = append(categoryResponses, response.SuccessCategoryResponse{
+			ID:            result.ID,
+			Title:         result.Title,
+			Slug:          result.Slug,
+			CreatedByName: result.User.Name,
+		})
+	}
+	defaultSuccessResponse = response.DefaultSuccessResponse{
+		Meta: response.Meta{
+			Status:  true,
+			Message: "Categories fetched successfully",
+		},
+		Data:       categoryResponses,
+		Pagination: nil,
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(defaultSuccessResponse)
 }
 
 // CreateCategory implements CategoryHandler.
@@ -116,7 +154,7 @@ func (c *categoryHandler) DeleteCategory(ctx *fiber.Ctx) error {
 	}
 
 	idParam := ctx.Params("categoryID")
-	id, err := conv.StringToInt(idParam)
+	id, err := conv.StringToInt64(idParam)
 	if err != nil {
 		code := "[Handler] DeleteCategory - 2"
 		log.Errorw(code, err)
@@ -172,7 +210,7 @@ func (c *categoryHandler) EditCategoryById(ctx *fiber.Ctx) error {
 	}
 
 	if err = ctx.BodyParser(&req); err != nil {
-		code := "[Handler] EditCategoryById - 2"
+		code = "[Handler] EditCategoryById - 2"
 		log.Errorw(code, err)
 		errorResp = response.ErrorResponseDefault{
 			Meta: response.Meta{
@@ -184,7 +222,7 @@ func (c *categoryHandler) EditCategoryById(ctx *fiber.Ctx) error {
 	}
 
 	if err := validatorLib.ValidateStruct(req); err != nil {
-		code := "[Handler] EditCategoryById - 3"
+		code = "[Handler] EditCategoryById - 3"
 		log.Errorw(code, err)
 		errorResp = response.ErrorResponseDefault{
 			Meta: response.Meta{
@@ -196,7 +234,7 @@ func (c *categoryHandler) EditCategoryById(ctx *fiber.Ctx) error {
 	}
 
 	idParam := ctx.Params("categoryID")
-	id, err := conv.StringToInt(idParam)
+	id, err := conv.StringToInt64(idParam)
 	if err != nil {
 		code := "[Handler] EditCategoryById - 4"
 		log.Errorw(code, err)
@@ -309,7 +347,7 @@ func (c *categoryHandler) GetCategoryById(ctx *fiber.Ctx) error {
 	}
 
 	idParam := ctx.Params("categoryID")
-	id, err := conv.StringToInt(idParam)
+	id, err := conv.StringToInt64(idParam)
 	if err != nil {
 		code := "[Handler] GetCategoryById - 2"
 		log.Errorw(code, err)

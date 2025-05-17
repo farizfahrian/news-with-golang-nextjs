@@ -16,3 +16,14 @@ type ContentEntity struct {
 	Category    CategoryEntity
 	User        UserEntity
 }
+
+type QueryString struct {
+	Page        int
+	Limit       int
+	OrderBy     string
+	OrderType   string
+	Search      string
+	CategoryID  int64
+	Status      string
+	IsPublished bool
+}

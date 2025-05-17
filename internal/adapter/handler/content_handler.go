@@ -23,10 +23,191 @@ type ContentHandler interface {
 	UpdateContent(ctx *fiber.Ctx) error
 	DeleteContent(ctx *fiber.Ctx) error
 	UploadImageR2(ctx *fiber.Ctx) error
+
+	// FE
+	GetContentWithQuery(ctx *fiber.Ctx) error
+	GetContentDetail(ctx *fiber.Ctx) error
 }
 
 type contentHandler struct {
 	contentService service.ContentService
+}
+
+// GetContentDetail implements ContentHandler.
+func (c *contentHandler) GetContentDetail(ctx *fiber.Ctx) error {
+	contentIDParam := ctx.Params("contentID")
+	contentID, err := conv.StringToInt64(contentIDParam)
+	if err != nil {
+		code = "[Handler] GetContentDetail - 2"
+		log.Errorw(code, err)
+		errorResp = response.ErrorResponseDefault{
+			Meta: response.Meta{
+				Status:  false,
+				Message: err.Error(),
+			},
+		}
+		return ctx.Status(fiber.StatusInternalServerError).JSON(errorResp)
+	}
+
+	result, err := c.contentService.GetContentById(ctx.Context(), contentID)
+	if err != nil {
+		code = "[Handler] GetContentDetail - 3"
+		log.Errorw(code, err)
+		errorResp = response.ErrorResponseDefault{
+			Meta: response.Meta{
+				Status:  false,
+				Message: err.Error(),
+			},
+		}
+		return ctx.Status(fiber.StatusInternalServerError).JSON(errorResp)
+	}
+
+	responseContent := response.SuccessContentResponse{
+		ID:           result.ID,
+		Title:        result.Title,
+		Excerpt:      result.Excerpt,
+		Description:  result.Description,
+		Image:        result.Image,
+		Tags:         result.Tags,
+		Status:       result.Status,
+		CategoryID:   result.CategoryID,
+		CreatedAt:    result.CreatedAt.Format(time.RFC3339),
+		CategoryName: result.Category.Title,
+		Author:       result.User.Name,
+	}
+
+	defaultSuccessResponse = response.DefaultSuccessResponse{
+		Meta: response.Meta{
+			Status:  true,
+			Message: "Content fetched successfully",
+		},
+		Data: responseContent,
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(defaultSuccessResponse)
+}
+
+// GetContentWithQuery implements ContentHandler.
+func (c *contentHandler) GetContentWithQuery(ctx *fiber.Ctx) error {
+	page := 1
+	if ctx.Query("page") != "" {
+		page, err = conv.StringToInt(ctx.Query("page"))
+		if err != nil {
+			code = "[Handler] GetContentWithQuery - 1"
+			log.Errorw(code, err)
+			errorResp = response.ErrorResponseDefault{
+				Meta: response.Meta{
+					Status:  false,
+					Message: "Invalid page number",
+				},
+			}
+			return ctx.Status(fiber.StatusBadRequest).JSON(errorResp)
+		}
+	}
+
+	limit := 6
+	if ctx.Query("limit") != "" {
+		limit, err = conv.StringToInt(ctx.Query("limit"))
+		if err != nil {
+			code = "[Handler] GetContentWithQuery - 2"
+			log.Errorw(code, err)
+			errorResp = response.ErrorResponseDefault{
+				Meta: response.Meta{
+					Status:  false,
+					Message: "Invalid limit number",
+				},
+			}
+			return ctx.Status(fiber.StatusBadRequest).JSON(errorResp)
+		}
+	}
+
+	orderBy := "created_at"
+	if ctx.Query("orderBy") != "" {
+		orderBy = ctx.Query("orderBy")
+	}
+
+	orderType := "desc"
+	if ctx.Query("orderType") != "" {
+		orderType = ctx.Query("orderType")
+	}
+
+	search := ""
+	if ctx.Query("search") != "" {
+		search = ctx.Query("search")
+	}
+
+	categoryID := 0
+	if ctx.Query("categoryID") != "" {
+		categoryID, err = conv.StringToInt(ctx.Query("categoryID"))
+		if err != nil {
+			code = "[Handler] GetContentWithQuery - 3"
+			log.Errorw(code, err)
+			errorResp = response.ErrorResponseDefault{
+				Meta: response.Meta{
+					Status:  false,
+					Message: "Invalid category ID",
+				},
+			}
+			return ctx.Status(fiber.StatusBadRequest).JSON(errorResp)
+		}
+	}
+
+	query := entity.QueryString{
+		Page:       page,
+		Limit:      limit,
+		Search:     search,
+		OrderBy:    orderBy,
+		OrderType:  orderType,
+		Status:     "PUBLISHED",
+		CategoryID: int64(categoryID),
+	}
+
+	results, totalData, totalPages, err := c.contentService.GetContents(ctx.Context(), query)
+	if err != nil {
+		code = "[Handler] GetContentWithQuery - 1"
+		log.Errorw(code, err)
+		errorResp = response.ErrorResponseDefault{
+			Meta: response.Meta{
+				Status:  false,
+				Message: err.Error(),
+			},
+		}
+		return ctx.Status(fiber.StatusInternalServerError).JSON(errorResp)
+	}
+
+	responseContent := []response.SuccessContentResponse{}
+	for _, content := range results {
+		respContent := response.SuccessContentResponse{
+			ID:           content.ID,
+			Title:        content.Title,
+			Excerpt:      content.Excerpt,
+			Description:  content.Description,
+			Image:        content.Image,
+			Tags:         content.Tags,
+			Status:       content.Status,
+			CategoryID:   content.CategoryID,
+			CreatedAt:    content.CreatedAt.Format(time.RFC3339),
+			CategoryName: content.Category.Title,
+			Author:       content.User.Name,
+		}
+		responseContent = append(responseContent, respContent)
+	}
+
+	defaultSuccessResponse = response.DefaultSuccessResponse{
+		Meta: response.Meta{
+			Status:  true,
+			Message: "Contents fetched successfullyz",
+		},
+		Data: responseContent,
+		Pagination: &response.PaginationResponse{
+			TotalRecords: int(totalData),
+			Page:         page,
+			PerPage:      limit,
+			TotalPages:   int(totalPages),
+		},
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(defaultSuccessResponse)
 }
 
 // CreateContent implements ContentHandler.
@@ -124,7 +305,7 @@ func (c *contentHandler) DeleteContent(ctx *fiber.Ctx) error {
 	}
 
 	contentIDParam := ctx.Params("contentID")
-	contentID, err := conv.StringToInt(contentIDParam)
+	contentID, err := conv.StringToInt64(contentIDParam)
 	if err != nil {
 		code = "[Handler] DeleteContent - 2"
 		log.Errorw(code, err)
@@ -178,7 +359,7 @@ func (c *contentHandler) GetContentById(ctx *fiber.Ctx) error {
 	}
 
 	idParam := ctx.Params("contentID")
-	id, err := conv.StringToInt(idParam)
+	id, err := conv.StringToInt64(idParam)
 	if err != nil {
 		code = "[Handler] GetContentById - 2"
 		log.Errorw(code, err)
@@ -246,9 +427,81 @@ func (c *contentHandler) GetContents(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusUnauthorized).JSON(errorResp)
 	}
 
-	results, err := c.contentService.GetContents(ctx.Context())
+	page := 1
+	if ctx.Query("page") != "" {
+		page, err = conv.StringToInt(ctx.Query("page"))
+		if err != nil {
+			code = "[Handler] GetContents - 2"
+			log.Errorw(code, err)
+			errorResp = response.ErrorResponseDefault{
+				Meta: response.Meta{
+					Status:  false,
+					Message: "Invalid page number",
+				},
+			}
+			return ctx.Status(fiber.StatusBadRequest).JSON(errorResp)
+		}
+	}
+
+	limit := 10
+	if ctx.Query("limit") != "" {
+		limit, err = conv.StringToInt(ctx.Query("limit"))
+		if err != nil {
+			code = "[Handler] GetContents - 3"
+			log.Errorw(code, err)
+			errorResp = response.ErrorResponseDefault{
+				Meta: response.Meta{
+					Status:  false,
+					Message: "Invalid limit number",
+				},
+			}
+			return ctx.Status(fiber.StatusBadRequest).JSON(errorResp)
+		}
+	}
+
+	search := ""
+	if ctx.Query("search") != "" {
+		search = ctx.Query("search")
+	}
+
+	orderBy := "created_at"
+	if ctx.Query("orderBy") != "" {
+		orderBy = ctx.Query("orderBy")
+	}
+
+	orderType := "desc"
+	if ctx.Query("orderType") != "" {
+		orderType = ctx.Query("orderType")
+	}
+
+	categoryID := 0
+	if ctx.Query("categoryID") != "" {
+		categoryID, err = conv.StringToInt(ctx.Query("categoryID"))
+		if err != nil {
+			code = "[Handler] GetContents - 4"
+			log.Errorw(code, err)
+			errorResp = response.ErrorResponseDefault{
+				Meta: response.Meta{
+					Status:  false,
+					Message: "Invalid category ID",
+				},
+			}
+			return ctx.Status(fiber.StatusBadRequest).JSON(errorResp)
+		}
+	}
+
+	query := entity.QueryString{
+		Page:       page,
+		Limit:      limit,
+		Search:     search,
+		OrderBy:    orderBy,
+		OrderType:  orderType,
+		CategoryID: int64(categoryID),
+	}
+
+	results, totalData, totalPages, err := c.contentService.GetContents(ctx.Context(), query)
 	if err != nil {
-		code = "[Handler] GetContents - 2"
+		code = "[Handler] GetContents - 5"
 		log.Errorw(code, err)
 		errorResp = response.ErrorResponseDefault{
 			Meta: response.Meta{
@@ -282,6 +535,12 @@ func (c *contentHandler) GetContents(ctx *fiber.Ctx) error {
 			Message: "Contents fetched successfully",
 		},
 		Data: respContents,
+		Pagination: &response.PaginationResponse{
+			TotalRecords: int(totalData),
+			Page:         page,
+			PerPage:      limit,
+			TotalPages:   int(totalPages),
+		},
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(defaultSuccessResponse)
