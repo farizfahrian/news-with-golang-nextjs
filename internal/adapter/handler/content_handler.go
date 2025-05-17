@@ -164,7 +164,7 @@ func (c *contentHandler) GetContentWithQuery(ctx *fiber.Ctx) error {
 
 	results, totalData, totalPages, err := c.contentService.GetContents(ctx.Context(), query)
 	if err != nil {
-		code = "[Handler] GetContentWithQuery - 1"
+		code = "[Handler] GetContentWithQuery - 4"
 		log.Errorw(code, err)
 		errorResp = response.ErrorResponseDefault{
 			Meta: response.Meta{
